@@ -1,4 +1,4 @@
-name: Advanced CI/CD Pipeline
+name: CI/CD with Docker Build and Integration Tests
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'CI-branch-test'
 
 jobs:
-  build-and-test:
+  build-and-integration-test:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,74 +16,39 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
-      - name: Set up QEMU
-        if: startsWith(matrix.os, 'ubuntu-')
-        uses: docker/setup-qemu-action@v1
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
           go-version: '1.21.5'
 
-      - name: Build Local Docker Image
-        run: make local-image
-        env:
-          LEDGER_ENABLED: 'false'
-          BUILD_TAGS: 'muslc,netgo,ledger'
-
-      - name: Run Integration Tests
-        run: make ictest-all
-
-      - name: Archive Production Artifacts
-        if: success()
-        uses: actions/upload-artifact@v3
-        with:
-          name: production-artifacts
-          path: |
-            ./bin/*
-            ./build/*
-
-      - name: Setup Go with cache
+      - name: Cache Go Modules
         uses: actions/cache@v2
         with:
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
+          path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
+
+      - name: Build Docker Image
+        run: |
+          cd docker/pstake
+          docker buildx build --load --tag pstake-local-image:latest .
 
       - name: Install Dependencies
         run: |
           go mod tidy
           go mod download
 
-      - name: Run Go Unit Tests
-        run: go test ./... -v -cover
+      - name: Run Unit Tests
+        run: go test ./... -v
 
-      - name: Publish Docker Image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          file: ./docker/pstake/Dockerfile
-          push: true
-          tags: user/app:latest
-          build-args: |
-            LEDGER_ENABLED=false
-            BUILD_TAGS=muslc,netgo,ledger
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-
-      - name: Move Cache
+      - name: Run Local Image & Integration Tests
         run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          docker run --name pstake_container -d pstake-local-image:latest
+          # Add commands to wait for the container to be fully up if necessary
+          make ictest-all
+        working-directory: ./interchaintest
 
+      - name: Cleanup
+        if: always()
+        run: docker stop pstake_container && docker rm pstake_container
