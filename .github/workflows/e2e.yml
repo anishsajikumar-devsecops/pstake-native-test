@@ -21,8 +21,9 @@ jobs:
   build-docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
@@ -39,9 +40,9 @@ jobs:
           binaries: |
             - /go/bin/pstaked
           build-env: |
-            - LEDGER_ENABLED=false
-            - BUILD_TAGS=muslc
-          tag: ${{ env.IMAGE_TAG }}
+            LEDGER_ENABLED=false
+            BUILD_TAGS=muslc
+          tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           org: "persistenceOne"
           local: true
 
