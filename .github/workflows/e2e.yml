@@ -3,7 +3,10 @@ name: CI Workflow for pstake-native with Matrix E2E Tests
 on:
   pull_request:
     branches:
-      - 'CI-branch-test'
+      - 'CI-branch-test' # Trigger on PRs targeting CI-branch-test branch
+  push:
+    branches:
+      - 'CI-branch-test' # Also trigger on pushes to CI-branch-test branch
 
 env:
   IMAGE_NAME: pstaked-local
