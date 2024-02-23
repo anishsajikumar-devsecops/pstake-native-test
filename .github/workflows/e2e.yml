@@ -31,8 +31,13 @@ jobs:
 
       - name: Build Docker Image
         run: |
-          cd docker/pstake
-          docker buildx build --load --tag pstake-local-image:latest .
+          cd docker
+          make docker-build
+        env:
+          DOCKER_FILE: Dockerfile
+          PROCESS: pstake
+          IMAGE_NAME: pstake-local-image
+          TAG_NAME: latest
 
       - name: Install Dependencies
         run: |
@@ -42,13 +47,25 @@ jobs:
       - name: Run Unit Tests
         run: go test ./... -v
 
-      - name: Run Local Image & Integration Tests
+      - name: Start Docker Container
         run: |
-          docker run --name pstake_container -d pstake-local-image:latest
+          cd docker
+          make docker-run
+        env:
+          CONTAINER_NAME: pstake_container
+          # Add any necessary environment variables for your Docker container
+
+      - name: Run Integration Tests
+        run: |
           # Add commands to wait for the container to be fully up if necessary
-          make test
-        working-directory: ./interchaintest
+          sleep 10  # Example: wait a bit for the container to be ready
+          make test-integration
+        env:
+          # Set necessary environment variables for your tests, such as API URLs or database connection strings
+          TEST_API_URL: http://localhost:8080
 
       - name: Cleanup
         if: always()
-        run: docker stop pstake_container && docker rm pstake_container
+        run: |
+          cd docker
+          make docker-clean-container
