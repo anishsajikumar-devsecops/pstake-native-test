@@ -46,7 +46,7 @@ jobs:
         run: |
           docker run --name pstake_container -d pstake-local-image:latest
           # Add commands to wait for the container to be fully up if necessary
-          make ictest-all
+          make test
         working-directory: ./interchaintest
 
       - name: Cleanup
