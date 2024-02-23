@@ -9,5 +9,5 @@
   binaries:
     - /go/bin/pstaked
   build-env:
-    - LEDGER_ENABLED=false
-    - BUILD_TAGS=muslc
+    LEDGER_ENABLED: "false"
+    BUILD_TAGS: "muslc"
