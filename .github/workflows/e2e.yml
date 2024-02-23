@@ -1,61 +1,72 @@
-name: Advanced Build and Test Pipeline for CI-branch-test
+name: Build and Test Workflow for pstake-native
 
 on:
-  push:
+  pull_request:
     branches:
-      - 'CI-branch-test'
+      - 'CI-branch-test' # Adjust this as necessary
 
 env:
-  GO_VERSION: 1.21.5
-  TAR_PATH: heighliner.tar
+  TAR_PATH: pstake-heighliner.tar
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - uses: actions/checkout@v3
+
+      - name: Build Docker image with Heighliner
+        uses: strangelove-ventures/heighliner-build-action@v0.0.3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          registry: "" # Assuming the registry is not needed for this workflow
+          tag: local # Use a local tag to emulate the local environment
+          tar-export-path: ${{ env.TAR_PATH }}
+          platform: linux/amd64
+          git-ref: ${{ github.head_ref }}
+          
+          # Heighliner chains.yaml configuration
+          chain: pstake
+          dockerfile: cosmos
+          build-target: make install
+          binaries:
+            - /go/bin/pstaked
+          build-env: |
+            LEDGER_ENABLED=false
+            BUILD_TAGS=muslc
 
-      - name: Build local Docker image using Heighliner
-        run: make local-image
-        env:
-          LEDGER_ENABLED: false
-          BUILD_TAGS: muslc
+      - name: Publish Docker Image Tarball as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: pstake-docker-image
+          path: ${{ env.TAR_PATH }}
 
-  test:
-    needs: build
+  e2e-tests:
+    needs: build-docker
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test-name: ["e2e-test-basic", "e2e-test-ibc-transfer"]
+        test: ["e2e-test-basic", "e2e-test-ibc-transfer"] # Define your e2e test targets here
       fail-fast: false
+
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Go with cache
-        uses: actions/setup-go@v5
+      - name: Download Docker Image Tarball Artifact
+        uses: actions/download-artifact@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          name: pstake-docker-image
 
-      - name: Cache Go modules
-        uses: actions/cache@v2
+      - name: Load Docker Image
+        run: docker image load -i ${{ env.TAR_PATH }}
+
+      - name: Set up Go 1.19
+        uses: actions/setup-go@v3
         with:
-          path: ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-      
-      - name: Run Test ${{ matrix.test-name }}
-        run: |
-          make ${{ matrix.test-name }}
-        env:
-          TEST_TARGET: "./x/..."
-          TEST_ARGS: "-timeout 10m -race -coverprofile=./coverage.out -covermode=atomic -v"
+          go-version: 1.19
+
+      - name: Checkout pstake-native chain code
+        uses: actions/checkout@v3
+
+      - name: Run End-to-End Test
+        run: make ${{ matrix.test }}
