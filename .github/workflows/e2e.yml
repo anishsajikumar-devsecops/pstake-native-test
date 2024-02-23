@@ -3,7 +3,10 @@ name: Build and Test Workflow for pstake-native
 on:
   pull_request:
     branches:
-      - 'CI-branch-test' # Adjust this as necessary
+      - 'CI-branch-test' # Trigger on PRs targeting CI-branch-test branch
+  push:
+    branches:
+      - 'CI-branch-test' # Also trigger on pushes to CI-branch-test branch
 
 env:
   TAR_PATH: pstake-heighliner.tar
@@ -26,7 +29,6 @@ jobs:
           tar-export-path: ${{ env.TAR_PATH }}
           platform: linux/amd64
           git-ref: ${{ github.head_ref }}
-          
           # Heighliner chains.yaml configuration
           chain: pstake
           dockerfile: cosmos
