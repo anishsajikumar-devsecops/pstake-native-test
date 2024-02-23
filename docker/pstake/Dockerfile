@@ -1,5 +1,5 @@
-FROM golang:1.19-alpine AS build-env
-
+# FROM golang:1.19-alpine AS build-env
+FROM golang:1.22.0-alpine3.18 AS build-env
 # Set up dependencies
 RUN apk add --no-cache curl make git libc-dev bash gcc linux-headers eudev-dev python3
 
