@@ -1,66 +1,61 @@
-name: CI/CD with Docker Build and Integration Tests
+name: Advanced Build and Test Pipeline for CI-branch-test
 
 on:
   push:
     branches:
       - 'CI-branch-test'
 
+env:
+  GO_VERSION: 1.21.5
+  TAR_PATH: heighliner.tar
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-integration-test:
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-
+      - uses: actions/checkout@v4
+      
       - name: Set up Go
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21.5'
+          go-version: ${{ env.GO_VERSION }}
 
-      - name: Cache Go Modules
+      - name: Build local Docker image using Heighliner
+        run: make local-image
+        env:
+          LEDGER_ENABLED: false
+          BUILD_TAGS: muslc
+
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test-name: ["e2e-test-basic", "e2e-test-ibc-transfer"]
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go with cache
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
         uses: actions/cache@v2
         with:
           path: ~/go/pkg/mod
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
-
-      - name: Build Docker Image
-        run: make docker-build
-        working-directory: ./docker
-        env:
-          DOCKER_FILE: Dockerfile
-          PROCESS: pstake
-          IMAGE_NAME: persistenceone/pstake
-          TAG_NAME: latest
-
-      - name: Install Dependencies
+      
+      - name: Run Test ${{ matrix.test-name }}
         run: |
-          go mod tidy
-          go mod download
-
-      - name: Run Unit Tests
-        run: go test ./... -v
-
-      - name: Run Docker Container
-        run: make docker-run
-        working-directory: ./docker
+          make ${{ matrix.test-name }}
         env:
-          CONTAINER_NAME: pstake_container
-
-      - name: Run Integration Tests
-        run: |
-          # Add commands or scripts to wait for the container to be fully up if necessary
-          sleep 10  # Example: wait a bit for the container to be ready
-          # Here you should add your command to run integration tests
-        env:
-          # Set necessary environment variables for your tests
-
-      - name: Cleanup
-        if: always()
-        run: make docker-clean
-        working-directory: ./docker
+          TEST_TARGET: "./x/..."
+          TEST_ARGS: "-timeout 10m -race -coverprofile=./coverage.out -covermode=atomic -v"
