@@ -29,15 +29,15 @@ jobs:
           tar-export-path: ${{ env.TAR_PATH }}
           platform: linux/amd64
           git-ref: ${{ github.head_ref }}
-          # Heighliner chains.yaml configuration
           chain: pstake
           dockerfile: cosmos
           build-target: make install
-          binaries:
+          binaries: |
             - /go/bin/pstaked
           build-env: |
-            LEDGER_ENABLED=false
-            BUILD_TAGS=muslc
+            - LEDGER_ENABLED=false
+            - BUILD_TAGS=muslc
+
 
       - name: Publish Docker Image Tarball as Artifact
         uses: actions/upload-artifact@v3
