@@ -35,8 +35,8 @@ jobs:
           github-repo: "pstake-native"
           git-ref: ${{ github.sha }}
           chain: "pstake"
-          dockerfile: "cosmos"
-          build-target: "make install"
+          dockerfile: "docker/pstake/Dockerfile" # Updated path to Dockerfile
+          build-target: "build" # Changed to "build" based on directory structure
           binaries: |
             - /go/bin/pstaked
           build-env: |
