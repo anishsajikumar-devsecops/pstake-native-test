@@ -22,25 +22,27 @@ jobs:
     runs-on: ubuntu-latest
     services:
       docker:
-        image: docker:19.03.12
+        image: docker:19.03.12-dind
         options: --privileged
         ports:
-          - 2375:2375
+          - 2375
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set DOCKER_HOST
-        run: echo "DOCKER_HOST=tcp://localhost:2375" >> $GITHUB_ENV
+        run: echo "DOCKER_HOST=tcp://docker:2375" >> $GITHUB_ENV
+
+      - name: Wait for Docker to start
+        run: until docker info; do echo Waiting for Docker...; sleep 5; done
 
       - name: Login to Docker
         run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Generate Local Image
         run: |
-          docker info
-          # Replace the following command with your actual build command
           docker build -t ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} .
+          docker images
 
       - name: Save Docker image to tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
@@ -54,11 +56,6 @@ jobs:
   e2e-tests:
     needs: build-docker
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        test: ["e2e-test-basic", "e2e-test-ibc-transfer"]
-      fail-fast: false
-
     steps:
       - name: Download Docker Image Tarball Artifact
         uses: actions/download-artifact@v3
@@ -78,6 +75,6 @@ jobs:
 
       - name: Run End-to-End Test
         run: |
-          # Replace the following command with your actual test command
           echo "Running E2E tests for ${{ matrix.test }}"
+          # Replace the following line with your actual test command
           # Example: make ${{ matrix.test }}
