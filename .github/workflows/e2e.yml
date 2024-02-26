@@ -34,7 +34,7 @@ jobs:
           github-repo: "pstake-native-test"
           git-ref: ${{ steps.branch-name.outputs.current_branch }}
           chain: "pstake"
-          dockerfile: "cosmos"
+          dockerfile: "./docker/pstake/Dockerfile"
           build-target: make install
           binaries: |
             - /go/bin/pstaked
