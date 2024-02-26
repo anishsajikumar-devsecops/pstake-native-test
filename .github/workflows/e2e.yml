@@ -39,7 +39,7 @@ jobs:
 
       - name: Generate Local Image using Heighliner Docker Container
         run: |
-          docker run --rm -v $PWD:/workspace -w /workspace YOUR_HEIGHLINER_DOCKER_IMAGE heighliner build -c pstake --local -f ./chains.yaml
+          docker run --rm -v $PWD:/workspace -w /workspace heighliner-build-env:latest heighliner build -c pstake --local -f ./chains.yaml
         env:
           DOCKER_HOST: tcp://localhost:2375
 
