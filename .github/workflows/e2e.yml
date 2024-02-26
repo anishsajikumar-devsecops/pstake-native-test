@@ -1,34 +1,85 @@
-name: CI Workflow for Docker Debugging
+name: CI Workflow for pstake-native with Matrix E2E Tests
 
 on:
+  pull_request:
+    branches:
+      - 'CI-branch-test' 
   push:
     branches:
-      - 'CI-branch-test'
+      - 'CI-branch-test' 
+
+env:
+  IMAGE_NAME: pstaked-local
+  IMAGE_TAG: latest
+  TAR_PATH: pstaked-image.tar
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  docker-debug:
+  build-docker:
     runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:19.03.12-dind
-        options: --privileged
-        ports:
-          - 2375:2375
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
-      - name: Set up Docker Client
-        run: |
-          sudo mkdir -p /etc/docker
-          echo '{"debug": true, "hosts": ["tcp://127.0.0.1:2375", "unix:///var/run/docker.sock"]}' | sudo tee /etc/docker/daemon.json
-          sudo service docker restart
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-      - name: Verify Docker Client Configuration
-        run: |
-          docker version
-          docker info
+      - name: Build Docker image with Heighliner
+        uses: strangelove-ventures/heighliner-build-action@v0.0.3
+        with:
+          # github-token: ${{ secrets.GITHUB_TOKEN }}
+          # github-organization: "persistenceOne"
+          github-repo: "pstake-native-test"
+          git-ref: ${{ github.sha }}
+          chain: "pstake"
+          dockerfile: "docker/pstake/Dockerfile" 
+          build-target: make install
+          binaries: |
+            - /go/bin/pstaked
+          build-env: |
+            LEDGER_ENABLED=false
+            BUILD_TAGS=muslc
+          tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          org: "persistenceOne"
+          # local: true
 
-      - name: Build and Run a Simple Docker Image
+      - name: Save Docker image to tarball
+        run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
+
+      - name: Upload Docker image tarball as an artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: docker-image-tarball
+          path: ${{ env.TAR_PATH }}
+
+  e2e-tests:
+    needs: build-docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test: ["e2e-test-basic", "e2e-test-ibc-transfer"]
+      fail-fast: false
+
+    steps:
+      - name: Download Docker Image Tarball Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: docker-image-tarball
+
+      - name: Load Docker Image
+        run: docker load < ${{ env.TAR_PATH }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: Checkout pstake-native chain code
+        uses: actions/checkout@v3
+
+      - name: Run End-to-End Test
         run: |
-          docker run hello-world
+          make ${{ matrix.test }}
