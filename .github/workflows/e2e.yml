@@ -31,17 +31,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Login to DockerHub (If required)
-        if: github.event_name != 'pull_request'
-        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-        env:
-          DOCKER_HOST: tcp://localhost:2375
+      - name: Set DOCKER_HOST environment variable
+        run: echo "DOCKER_HOST=tcp://docker:2375" >> $GITHUB_ENV
+
+      - name: Login to Docker
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
       - name: Generate Local Image using Heighliner Docker Container
         run: |
           docker run --rm -v $PWD:/workspace -w /workspace heighliner-build-env:latest heighliner build -c pstake --local -f ./chains.yaml
-        env:
-          DOCKER_HOST: tcp://localhost:2375
 
       - name: Save Docker image to tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
