@@ -34,22 +34,21 @@ jobs:
       - name: Build Docker image with Heighliner
         uses: strangelove-ventures/heighliner-build-action@v0.0.3
         with:
-          # Ensure you uncomment and configure these fields correctly
-          # github-token: ${{ secrets.GITHUB_TOKEN }}
-          # github-organization: "persistenceOne"
-          # github-repo: "pstake-native-test"
-          # git-ref: ${{ github.sha }}
-          # chain: "pstake"
-          # dockerfile: "docker/pstake/Dockerfile" 
-          # build-target: make install
-          # binaries: |
-          #   - /go/bin/pstaked
-          # build-env: |
-          #   LEDGER_ENABLED=false
-          #   BUILD_TAGS=muslc
-          # tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          # org: "persistenceOne"
-          # local: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-organization: "persistenceOne"
+          github-repo: "pstake-native-test"
+          git-ref: ${{ github.sha }}
+          chain: "pstake"
+          dockerfile: "docker/pstake/Dockerfile" 
+          build-target: "make install"
+          binaries: |
+            - /go/bin/pstaked
+          build-env: |
+            LEDGER_ENABLED=false
+            BUILD_TAGS=muslc
+          tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          org: "persistenceOne"
+          local: true
 
       - name: Save Docker image to tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
