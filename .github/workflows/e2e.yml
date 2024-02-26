@@ -41,9 +41,13 @@ jobs:
           build-env: |
             - "LEDGER_ENABLED=false"
             - "BUILD_TAGS=muslc"
-          tag: local 
-          tar-export-path: ${{ env.TAR_PATH }} 
-          platform: linux/amd64 
+          tag: local
+          platform: linux/amd64
+
+      # New step to save the Docker image as a tarball
+      - name: Export Docker image as Tarball
+        run: |
+          docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
 
       - name: Publish Tarball as Artifact
         uses: actions/upload-artifact@v4
