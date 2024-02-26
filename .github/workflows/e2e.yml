@@ -3,10 +3,10 @@ name: CI Workflow for pstake-native with Matrix E2E Tests
 on:
   pull_request:
     branches:
-      - 'CI-branch-test' # Trigger on PRs targeting CI-branch-test branch
+      - 'CI-branch-test' 
   push:
     branches:
-      - 'CI-branch-test' # Also trigger on pushes to CI-branch-test branch
+      - 'CI-branch-test' 
 
 env:
   IMAGE_NAME: pstaked-local
@@ -30,21 +30,21 @@ jobs:
       - name: Build Docker image with Heighliner
         uses: strangelove-ventures/heighliner-build-action@v0.0.3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-organization: "persistenceOne"
-          github-repo: "pstake-native"
+          # github-token: ${{ secrets.GITHUB_TOKEN }}
+          # github-organization: "persistenceOne"
+          github-repo: "pstake-native-test"
           git-ref: ${{ github.sha }}
           chain: "pstake"
-          dockerfile: "docker/pstake/Dockerfile" # Updated path to Dockerfile
-          build-target: "build" # Changed to "build" based on directory structure
+          dockerfile: "docker/pstake/Dockerfile" 
+          build-target: "make build" 
           binaries: |
             - /go/bin/pstaked
-          build-env: |
-            LEDGER_ENABLED=false
-            BUILD_TAGS=muslc
+          # build-env: |
+          #   LEDGER_ENABLED=false
+          #   BUILD_TAGS=muslc
           tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           org: "persistenceOne"
-          local: true
+          # local: true
 
       - name: Save Docker image to tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
