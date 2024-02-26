@@ -20,36 +20,28 @@ concurrency:
 jobs:
   build-docker:
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:19.03.12
+        options: --privileged
+        ports:
+          - 2375:2375
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub (If required)
+        if: github.event_name != 'pull_request'
+        run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+        env:
+          DOCKER_HOST: tcp://localhost:2375
 
-      - name: Generate Local Image
-        run: make local-image
-        # Make sure your repository has a Makefile with a `local-image` target that performs the actions needed
-
-      # Uncomment and configure the following fields as necessary for the Heighliner build action
-      # - name: Build Docker image with Heighliner
-      #   uses: strangelove-ventures/heighliner-build-action@v0.0.3
-      #   with:
-      #     github-token: ${{ secrets.GITHUB_TOKEN }}
-      #     github-organization: "persistenceOne"
-      #     github-repo: "pstake-native-test"
-      #     git-ref: ${{ github.sha }}
-      #     chain: "pstake"
-      #     dockerfile: "docker/pstake/Dockerfile"
-      #     build-target: "make install"
-      #     binaries: |
-      #       - /go/bin/pstaked
-      #     build-env: |
-      #       LEDGER_ENABLED=false
-      #       BUILD_TAGS=muslc
-      #     tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-      #     org: "persistenceOne"
-      #     local: true
+      - name: Generate Local Image using Heighliner Docker Container
+        run: |
+          docker run --rm -v $PWD:/workspace -w /workspace YOUR_HEIGHLINER_DOCKER_IMAGE heighliner build -c pstake --local -f ./chains.yaml
+        env:
+          DOCKER_HOST: tcp://localhost:2375
 
       - name: Save Docker image to tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
