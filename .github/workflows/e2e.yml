@@ -18,68 +18,74 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-docker:
+  build-e2e-environment:
     runs-on: ubuntu-latest
     steps:
+      - name: Get branch name
+        id: branch-name
+        uses: tj-actions/branch-names@v8
+
       - name: Checkout code
         uses: actions/checkout@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
 
       - name: Build Docker image with Heighliner
         uses: strangelove-ventures/heighliner-build-action@v0.0.3
         with:
-          # github-token: ${{ secrets.GITHUB_TOKEN }}
-          # github-organization: "persistenceOne"
           github-repo: "pstake-native-test"
-          git-ref: ${{ github.sha }}
+          git-ref: ${{ steps.branch-name.outputs.current_branch }}
           chain: "pstake"
-          dockerfile: "docker/pstake/Dockerfile" 
+          dockerfile: "cosmos"
           build-target: make install
           binaries: |
             - /go/bin/pstaked
           build-env: |
             LEDGER_ENABLED=false
             BUILD_TAGS=muslc
-          tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          org: "persistenceOne"
-          # local: true
+          tag: local # emulate local environment for consistency in interchaintest cases
+          tar-export-path: ${{ env.TAR_PATH }} # export a tarball that can be uploaded as an artifact for the e2e jobs
+          platform: linux/amd64 # test runner architecture only
 
-      - name: Save Docker image to tarball
-        run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
-
-      - name: Upload Docker image tarball as an artifact
-        uses: actions/upload-artifact@v3
+      - name: Publish Tarball as Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: docker-image-tarball
+          name: pstake-docker-image
           path: ${{ env.TAR_PATH }}
 
+      - name: Setup Go with cache
+        uses: magnetikonline/action-golang-cache@v4
+        with:
+          go-version: "1.21.5"
+
+      - name: Download dependencies for interchaintest
+        run: |
+          cd interchaintest && go mod download
+
   e2e-tests:
-    needs: build-docker
+    needs: build-e2e-environment
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test: ["e2e-test-basic", "e2e-test-ibc-transfer"]
+        test:
+          - "e2e-test-basic"
+          - "e2e-test-ibc-transfer"
       fail-fast: false
 
     steps:
-      - name: Download Docker Image Tarball Artifact
-        uses: actions/download-artifact@v3
+      - name: Download Tarball Artifact
+        uses: actions/download-artifact@v4
         with:
-          name: docker-image-tarball
+          name: pstake-docker-image
 
       - name: Load Docker Image
-        run: docker load < ${{ env.TAR_PATH }}
+        run: docker image load -i ${{ env.TAR_PATH }}
 
-      - name: Set up Go
-        uses: actions/setup-go@v3
+      - name: Setup Go with cache
+        uses: magnetikonline/action-golang-cache@v4
         with:
-          go-version: 1.19
+          go-version: "1.21.5"
 
-      - name: Checkout pstake-native chain code
-        uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Run End-to-End Test
-        run: |
-          make ${{ matrix.test }}
+      - name: Run test
+        run: make ${{ matrix.test }}
