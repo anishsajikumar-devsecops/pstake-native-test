@@ -3,10 +3,10 @@ name: CI Workflow for pstake-native with Matrix E2E Tests
 on:
   pull_request:
     branches:
-      - 'CI-branch-test' 
+      - 'CI-branch-test'
   push:
     branches:
-      - 'CI-branch-test' 
+      - 'CI-branch-test'
 
 env:
   IMAGE_NAME: pstaked-local
@@ -29,26 +29,27 @@ jobs:
 
       - name: Generate Local Image
         run: make local-image
-        # Ensure your repository has a Makefile with a `local-image` target that does what you need
+        # Make sure your repository has a Makefile with a `local-image` target that performs the actions needed
 
-      - name: Build Docker image with Heighliner
-        uses: strangelove-ventures/heighliner-build-action@v0.0.3
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-organization: "persistenceOne"
-          github-repo: "pstake-native-test"
-          git-ref: ${{ github.sha }}
-          chain: "pstake"
-          dockerfile: "docker/pstake/Dockerfile" 
-          build-target: "make install"
-          binaries: |
-            - /go/bin/pstaked
-          build-env: |
-            LEDGER_ENABLED=false
-            BUILD_TAGS=muslc
-          tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          org: "persistenceOne"
-          local: true
+      # Uncomment and configure the following fields as necessary for the Heighliner build action
+      # - name: Build Docker image with Heighliner
+      #   uses: strangelove-ventures/heighliner-build-action@v0.0.3
+      #   with:
+      #     github-token: ${{ secrets.GITHUB_TOKEN }}
+      #     github-organization: "persistenceOne"
+      #     github-repo: "pstake-native-test"
+      #     git-ref: ${{ github.sha }}
+      #     chain: "pstake"
+      #     dockerfile: "docker/pstake/Dockerfile"
+      #     build-target: "make install"
+      #     binaries: |
+      #       - /go/bin/pstaked
+      #     build-env: |
+      #       LEDGER_ENABLED=false
+      #       BUILD_TAGS=muslc
+      #     tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+      #     org: "persistenceOne"
+      #     local: true
 
       - name: Save Docker image to tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }} > ${{ env.TAR_PATH }}
