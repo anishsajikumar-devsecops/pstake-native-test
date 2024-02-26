@@ -39,9 +39,9 @@ jobs:
           build-target: make install
           binaries: |
             - /go/bin/pstaked
-          build-env: |
-            LEDGER_ENABLED=false
-            BUILD_TAGS=muslc
+          # build-env: |
+          #   LEDGER_ENABLED=false
+          #   BUILD_TAGS=muslc
           tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           #org: "persistenceOne"
           # local: true
