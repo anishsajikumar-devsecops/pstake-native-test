@@ -27,23 +27,28 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
 
+      - name: Generate Local Image
+        run: make local-image
+        # Ensure your repository has a Makefile with a `local-image` target that does what you need
+
       - name: Build Docker image with Heighliner
         uses: strangelove-ventures/heighliner-build-action@v0.0.3
         with:
+          # Ensure you uncomment and configure these fields correctly
           # github-token: ${{ secrets.GITHUB_TOKEN }}
-          github-organization: "persistenceOne"
-          github-repo: "pstake-native-test"
-          #git-ref: ${{ github.sha }}
-          chain: "pstake"
-          dockerfile: "docker/pstake/Dockerfile" 
-          build-target: make install
-          binaries: |
-            - /go/bin/pstaked
+          # github-organization: "persistenceOne"
+          # github-repo: "pstake-native-test"
+          # git-ref: ${{ github.sha }}
+          # chain: "pstake"
+          # dockerfile: "docker/pstake/Dockerfile" 
+          # build-target: make install
+          # binaries: |
+          #   - /go/bin/pstaked
           # build-env: |
           #   LEDGER_ENABLED=false
           #   BUILD_TAGS=muslc
-          tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
-          #org: "persistenceOne"
+          # tag: ${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          # org: "persistenceOne"
           # local: true
 
       - name: Save Docker image to tarball
