@@ -1,3 +1,4 @@
+---
 - name: pstake
   github-organization: persistenceOne
   github-repo: pstake-native
@@ -6,5 +7,5 @@
   binaries:
     - /go/bin/pstaked
   build-env:
-    - LEDGER_ENABLED: "false"
-    - BUILD_TAGS: "muslc"
+    LEDGER_ENABLED: "false"
+    BUILD_TAGS: muslc
